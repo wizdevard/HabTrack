@@ -184,24 +184,7 @@
         }
 
         /* Delete button - Touch friendly */
-        .delete {
-            cursor: pointer;
-            color: var(--danger);
-            font-size: clamp(1.1rem, 4vw, 1.25rem);
-            min-width: var(--touch-target);
-            min-height: var(--touch-target);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            margin-left: var(--space-sm);
-            transition: background 0.2s;
-            flex-shrink: 0;
-        }
 
-        .delete:active {
-            background: rgba(255, 68, 68, 0.1);
-        }
 
         /* Days Section - Centered and Responsive */
         .daysSection {
@@ -484,6 +467,55 @@
             animation-delay: .5s;
         }
 
+        /* Locked state for days */
+        .day.locked {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .day.locked::after {
+            display: none;
+        }
+
+        .locked-indicator {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        /* Delete button */
+        .delete-btn {
+            cursor: pointer;
+            color: var(--danger);
+            font-size: clamp(1.1rem, 4vw, 1.25rem);
+            min-width: var(--touch-target);
+            min-height: var(--touch-target);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-left: var(--space-sm);
+            transition: all 0.2s;
+            flex-shrink: 0;
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 0;
+            pointer-events: auto;
+            z-index: 10;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .delete-btn:active {
+            background: rgba(255, 68, 68, 0.1);
+            transform: scale(0.9);
+        }
+
         @keyframes spin {
             0% {
                 transform: rotate(0);
@@ -638,7 +670,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyADqdj_39cqt5tzNBfRYLgfK35Wn_laTGQ",
@@ -647,7 +679,9 @@
             storageBucket: "habtrack-e7a25.firebasestorage.app",
             messagingSenderId: "346527140445",
             appId: "1:346527140445:web:d72d5b302fe2dcc9c09bb4"
-        }; const app = initializeApp(firebaseConfig);
+        };
+
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
@@ -660,9 +694,20 @@
         const weeklyDataEl = document.getElementById("weeklyData");
         const toast = document.getElementById("toast");
 
-        let userId;
+        let userId = null;
 
-        // Preloader
+        // ============================================
+        // TOAST FUNCTION
+        // ============================================
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // ============================================
+        // PRELOADER
+        // ============================================
         window.addEventListener("load", () => {
             const loader = document.getElementById("preloader");
             setTimeout(() => {
@@ -671,14 +716,9 @@
             }, 500);
         });
 
-        // Toast function
-        function showToast(message) {
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-
-        // Auth
+        // ============================================
+        // AUTH
+        // ============================================
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 userId = user.uid;
@@ -690,22 +730,27 @@
             }
         });
 
-        // Modal
+        // ============================================
+        // MODAL
+        // ============================================
         openModalBtn.onclick = () => {
             modal.style.display = "flex";
             setTimeout(() => habitInput.focus(), 100);
-        }
+        };
 
-        modal.onclick = (e) => { if (e.target === modal) { modal.style.display = "none"; } }
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.style.display = "none";
+        };
 
-        // Close modal on escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && modal.style.display === 'flex') {
                 modal.style.display = 'none';
             }
         });
 
-        // Create Habit
+        // ============================================
+        // CREATE HABIT
+        // ============================================
         createHabitBtn.onclick = async () => {
             const name = habitInput.value.trim();
             if (!name) {
@@ -713,10 +758,11 @@
                 setTimeout(() => habitInput.style.borderColor = '#e0e0e0', 1000);
                 return;
             }
-
             try {
                 await addDoc(collection(db, "users", userId, "habits"), {
-                    name: name, streak: 0, days: [false, false, false, false, false, false, false]
+                    name: name,
+                    streak: 0,
+                    days: [false, false, false, false, false, false, false]
                 });
                 habitInput.value = "";
                 modal.style.display = "none";
@@ -727,14 +773,15 @@
             } catch (error) {
                 showToast("Error creating habit");
             }
-        }
+        };
 
-        // Enter key in input
         habitInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') createHabitBtn.click();
         });
 
-        // Navigation
+        // ============================================
+        // NAVIGATION (SIMPLE - NO STREAK CLAIM)
+        // ============================================
         const navBtns = document.querySelectorAll(".navBtn");
         const pages = document.querySelectorAll(".page");
         navBtns.forEach(btn => {
@@ -743,62 +790,110 @@
                 btn.classList.add("active");
                 const page = btn.dataset.page;
                 pages.forEach(p => p.style.display = p.id === page ? 'flex' : 'none');
-            }
-        })
+            };
+        });
 
-        // Load Habits
+        // ============================================
+        // RESET ALL CHECKBOXES (WHEN ALL 7 CHECKED)
+        // ============================================
+        async function checkAndResetIfAllComplete() {
+            try {
+                const snapshot = await getDocs(collection(db, "users", userId, "habits"));
+                let allComplete = true;
+                let anyHabit = false;
+
+                snapshot.forEach((d) => {
+                    const data = d.data();
+                    anyHabit = true;
+                    const checkedCount = data.days.filter(v => v).length;
+                    if (checkedCount < 7) {
+                        allComplete = false;
+                    }
+                });
+
+                // If all habits have all 7 days checked, reset all checkboxes
+                if (anyHabit && allComplete) {
+                    const batch = writeBatch(db);
+                    snapshot.forEach((d) => {
+                        const habitRef = doc(db, "users", userId, "habits", d.id);
+                        batch.update(habitRef, {
+                            days: [false, false, false, false, false, false, false]
+                        });
+                    });
+                    await batch.commit();
+                    showToast("🎉 All complete! Checkboxes reset!");
+                    loadHabits();
+                    loadWeekly();
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error("Error checking/resetting:", error);
+                return false;
+            }
+        }
+
+        // ============================================
+        // LOAD HABITS
+        // ============================================
         async function loadHabits() {
             habitContainer.innerHTML = "";
             const snapshot = await getDocs(collection(db, "users", userId, "habits"));
-
             if (snapshot.empty) {
                 habitContainer.innerHTML = `
-      <div class="emptyState">
-        <div class="emptyStateIcon">📝</div>
-        <div>No habits yet. Create your first habit above!</div>
-      </div>
-    `;
+                <div class="emptyState">
+                    <div class="emptyStateIcon">📝</div>
+                    <div>No habits yet. Create your first habit above!</div>
+                </div>
+            `;
                 return;
             }
-
             snapshot.forEach(docSnap => { createHabitCard(docSnap.data(), docSnap.id); });
         }
 
-        // Create Card
         function createHabitCard(habit, id) {
             let boxes = "";
             habit.days.forEach((day, i) => {
-                boxes += `<div class="day ${day ? "active" : ""}" data-index="${i}" data-id="${id}" role="button" aria-label="Day ${i + 1} ${day ? 'completed' : 'not completed'}"></div>`;
+                boxes += `<div class="day ${day ? "active" : ""}" data-index="${i}" data-id="${id}"></div>`;
             });
 
             const card = document.createElement("div");
             card.className = "habitCard";
             card.innerHTML = `
-    <div class="habitHeader">
-      <div class="habitLeft">
-        <div class="habitIcon">🔥</div>
-        <div class="habitInfo">
-          <strong>${habit.name}</strong>
-          <small>${habit.streak} day streak</small>
-        </div>
-      </div>
-      <div class="delete" data-id="${id}" role="button" aria-label="Delete habit">🗑</div>
-    </div>
-    <div class="daysSection">
-      <div class="daysLabel">
-        <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
-      </div>
-      <div class="streak">${boxes}</div>
-    </div>
-  `;
+            <div class="habitHeader">
+                <div class="habitLeft">
+                    <div class="habitIcon">🔥</div>
+                    <div class="habitInfo">
+                        <strong>${habit.name}</strong>
+                        <small>${habit.streak} day streak</small>
+                    </div>
+                </div>
+                <button class="delete-btn" data-id="${id}" type="button" aria-label="Delete habit">🗑</button>
+            </div>
+            <div class="daysSection">
+                <div class="daysLabel">
+                    <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+                </div>
+                <div class="streak">${boxes}</div>
+            </div>
+        `;
             habitContainer.appendChild(card);
         }
 
-        // Habit Click (toggle day or delete)
+        // ============================================
+        // HABIT CLICK HANDLER (DELETE & TOGGLE)
+        // ============================================
         habitContainer.addEventListener("click", async (e) => {
             // Handle delete
-            if (e.target.classList.contains("delete")) {
-                const id = e.target.dataset.id;
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = deleteBtn.dataset.id;
+                if (!id || !userId) {
+                    showToast("Error: not logged in");
+                    return;
+                }
                 if (confirm("Delete this habit?")) {
                     try {
                         await deleteDoc(doc(db, "users", userId, "habits", id));
@@ -807,6 +902,7 @@
                         loadTotalStreak();
                         loadWeekly();
                     } catch (error) {
+                        console.error("Delete error:", error);
                         showToast("Error deleting habit");
                     }
                 }
@@ -814,74 +910,104 @@
             }
 
             // Handle day toggle
-            if (e.target.classList.contains("day")) {
-                const id = e.target.dataset.id;
-                const index = e.target.dataset.index;
-                const snapshot = await getDocs(collection(db, "users", userId, "habits"));
-                snapshot.forEach(async (d) => {
-                    if (d.id === id) {
-                        let data = d.data();
-                        data.days[index] = !data.days[index];
-                        let streak = data.days.filter(v => v).length;
-                        await updateDoc(doc(db, "users", userId, "habits", id), { days: data.days, streak: streak });
+            const dayBox = e.target.closest('.day');
+            if (dayBox) {
+                e.stopPropagation();
+                const id = dayBox.dataset.id;
+                const index = parseInt(dayBox.dataset.index);
+
+                if (!id || isNaN(index) || !userId) return;
+
+                try {
+                    const habitRef = doc(db, "users", userId, "habits", id);
+                    const habitSnap = await getDoc(habitRef);
+
+                    if (habitSnap.exists()) {
+                        let data = habitSnap.data();
+                        const wasChecked = data.days[index];
+
+                        // Toggle the clicked day
+                        data.days[index] = !wasChecked;
+
+                        // Update individual habit streak (persists forever)
+                        if (!wasChecked) {
+                            data.streak = (data.streak || 0) + 1;
+                        } else {
+                            data.streak = Math.max(0, (data.streak || 0) - 1);
+                        }
+
+                        await updateDoc(habitRef, { days: data.days, streak: data.streak });
                         loadHabits();
                         loadTotalStreak();
                         loadWeekly();
+
+                        // Check if all 7 days are complete - if so, reset all checkboxes
+                        setTimeout(async () => {
+                            await checkAndResetIfAllComplete();
+                        }, 100);
                     }
-                })
+                } catch (error) {
+                    console.error("Update error:", error);
+                    showToast("Error updating habit");
+                }
             }
         });
 
-        // Total Streak
+        // ============================================
+        // LOAD TOTAL STREAK (SUM OF ALL HABIT STREAKS)
+        // ============================================
         async function loadTotalStreak() {
-            const snapshot = await getDocs(collection(db, "users", userId, "habits"));
-            let total = 0;
-            snapshot.forEach(d => { total += d.data().streak });
+            try {
+                const snapshot = await getDocs(collection(db, "users", userId, "habits"));
+                let total = 0;
+                snapshot.forEach(d => { total += d.data().streak || 0 });
 
-            // Animate number
-            const start = parseInt(totalStreakEl.textContent) || 0;
-            const end = total;
-            const duration = 1000;
-            const startTime = performance.now();
+                const start = parseInt(totalStreakEl.textContent) || 0;
+                const end = total;
+                const duration = 1000;
+                const startTime = performance.now();
 
-            function updateNumber(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                const current = Math.round(start + (end - start) * easeOut);
-
-                totalStreakEl.textContent = current;
-
-                if (progress < 1) {
-                    requestAnimationFrame(updateNumber);
+                function updateNumber(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(start + (end - start) * easeOut);
+                    totalStreakEl.textContent = current;
+                    if (progress < 1) requestAnimationFrame(updateNumber);
                 }
+                requestAnimationFrame(updateNumber);
+            } catch (error) {
+                console.error("Error loading streak:", error);
             }
-
-            requestAnimationFrame(updateNumber);
         }
 
-        // Weekly Activity
+        // ============================================
+        // LOAD WEEKLY ACTIVITY
+        // ============================================
         async function loadWeekly() {
             weeklyDataEl.innerHTML = "";
             const snapshot = await getDocs(collection(db, "users", userId, "habits"));
-
             if (snapshot.empty) {
                 weeklyDataEl.innerHTML = '<div class="emptyState">No data available</div>';
                 return;
             }
-
             snapshot.forEach(d => {
                 const habit = d.data();
+                const completedDays = habit.days.filter(v => v).length;
+                const percentage = Math.round((completedDays / 7) * 100);
                 const div = document.createElement("div");
                 div.className = "weeklyItem";
                 div.innerHTML = `
-      <strong>${habit.name}</strong>
-      <div class="weekDays">${habit.days.map(v => v ? '🟪' : '⬜').join('')}</div>
-    `;
+                <div class="weeklyItemHeader">
+                    <strong>${habit.name} (Streak: ${habit.streak || 0})</strong>
+                    <span class="progressPercentage">${percentage}%</span>
+                </div>
+                <div class="progressBarContainer">
+                    <div class="progressBarFill" style="width: ${percentage}%"></div>
+                </div>
+                <div class="weekDays">${habit.days.map(v => v ? '🟪' : '⬜').join('')}</div>
+            `;
                 weeklyDataEl.appendChild(div);
             });
         }
     </script>
-</body>
-
-</html>
