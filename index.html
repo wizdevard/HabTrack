@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabTrack</title>
+    <link rel="shortcut icon" href="./images/HabTrack.jpeg" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+        integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link rel="stylesheet" href="./login.css">
+</head>
+
+<body style="background: linear-gradient(to bottom,  #ffc371, #ff5f6d)">
+
+  
+
+    <div class="wrapper">
+        <div class="card-switch">
+            <label class="switch">
+                <input class="toggle" type="checkbox">
+                <span class="slider"></span>
+                <span class="card-side"></span>
+                <div class="flip-card__inner">
+                    <div class="flip-card__front">
+                        <div class="title">Log in</div>
+                        <form action="" class="flip-card__form" id="loginForm">
+                            <input type="email" placeholder="Email" name="email" class="flip-card__input" required>
+                            <input type="password" name="password" id="loginPassword" placeholder="Password"
+                                class="flip-card__input" required>
+                            <button type="button" class="toggle-password" data-target="loginPassword"
+                                style="position: absolute; right: 10px; top: 35%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">👁️</button>
+                                <p id="errorText"></p>
+
+                            <button class="flip-card__btn">Let`s go!</button>
+                        </form>
+                    </div>
+                    <div class="flip-card__back">
+                        <div class="title">Sign up</div>
+                        <form class="flip-card__form" id="signUp">
+                            <input type="name" name="name" placeholder="Name" class="flip-card__input" required>
+                            <input type="email" name="email" placeholder="Email" class="flip-card__input" required>
+
+                            <div class="password-wrapper" style="position: relative;">
+                                <input type="password" name="password" id="signUpPassword" placeholder="Password"
+                                    class="flip-card__input" required minlength="8">
+                                <button type="button" class="toggle-password" data-target="signUpPassword"
+                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">👁️</button>
+
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="flip-card__btn">Confirm!</button>
+                        </form>
+                    </div>
+                </div>
+            </label>
+        </div>
+    </div>
+
+
+
+
+
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyADqdj_39cqt5tzNBfRYLgfK35Wn_laTGQ",
+            authDomain: "habtrack-e7a25.firebaseapp.com",
+            projectId: "habtrack-e7a25",
+            storageBucket: "habtrack-e7a25.firebasestorage.app",
+            messagingSenderId: "346527140445",
+            appId: "1:346527140445:web:d72d5b302fe2dcc9c09bb4"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+
+
+
+
+        const auth = getAuth(app);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Select all toggle buttons
+            const toggleButtons = document.querySelectorAll('.toggle-password');
+
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.getAttribute('data-target');
+                    const passwordInput = document.getElementById(targetId);
+
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        btn.textContent = '🙈';
+                    } else {
+                        passwordInput.type = 'password';
+                        btn.textContent = '👁️';
+                    }
+                });
+            });
+        });
+        const signUpForm = document.getElementById('signUp');
+
+        signUpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = signUpForm.email.value;
+            const name = signUpForm.name.value;
+            const password = signUpForm.password.value;
+
+            // Password length check
+
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                await updateProfile(user, { displayName: name });
+                console.log("User signed up:", user);
+
+                const flipToggle = document.querySelector('.toggle');
+
+                flipToggle.checked = false; // flip back to login
+                signUpForm.reset();
+
+                alert(`Signup successful! Welcome, ${name}. Please log in.`);
+            } catch (error) {
+
+                if (error.code === 'auth/email-already-in-use') {
+                    alert("This email is already registered. Try logging in instead.");
+                } else {
+                    console.log("Error signing up:", error);
+                }
+            }
+        });
+
+
+
+
+    </script>
+
+
+
+    <script type="module">
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+        const auth = getAuth();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById("loginForm");
+
+            if (!loginForm) return; // safety check
+
+            loginForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const email = loginForm.email.value;
+                const password = loginForm.password.value;
+
+                try {
+                    const auth = getAuth();
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    const displayName = user.displayName || "User";
+                    console.log("Logged in:", user);
+                    alert(`Welcome back, ${displayName}!`);
+
+                    // Redirect
+                    window.location.href = "dashboard.html";
+
+                } catch (error) {
+                    console.log(error);
+
+
+                  errorText.innerHTML = error.message.replace('Firebase: ', '').replace('(auth/', '').replace(').', '')
+     
+
+                    // ALWAYS use error.code for Firebase auth errors
+                    // if (error.code === "auth/user-not-found") {
+                    //     alert("No account found with this email.");
+                    // } else if (error.code == "auth/wrong-password") {
+                    //     alert("Incorrect password!");
+                    // } else {
+                    //     alert("Login failed: " +  );
+                    // }
+                }
+            });
+        });
+
+    </script>
+
+
+
+
+
+
+
+
+
+</body>
+
+</html>
