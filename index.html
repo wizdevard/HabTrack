@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="google-site-verification" content="4GrGRT7K_3FTqVj85HkkxI50nN_eTtNCBQF4z1etFeA" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HabTrack</title>
     <link rel="shortcut icon" href="./images/HabTrack.jpeg" type="image/x-icon">
@@ -15,7 +16,7 @@
 
 <body style="background: linear-gradient(to bottom,  #ffc371, #ff5f6d)">
 
-  
+
 
     <div class="wrapper">
         <div class="card-switch">
@@ -32,7 +33,7 @@
                                 class="flip-card__input" required>
                             <button type="button" class="toggle-password" data-target="loginPassword"
                                 style="position: absolute; right: 10px; top: 35%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">👁️</button>
-                                <p id="errorText"></p>
+                            <p id="errorText"></p>
 
                             <button class="flip-card__btn">Let`s go!</button>
                         </form>
@@ -179,8 +180,8 @@
                     console.log(error);
 
 
-                  errorText.innerHTML = error.message.replace('Firebase: ', '').replace('(auth/', '').replace(').', '')
-     
+                    errorText.innerHTML = error.message.replace('Firebase: ', '').replace('(auth/', '').replace(').', '')
+
 
                     // ALWAYS use error.code for Firebase auth errors
                     // if (error.code === "auth/user-not-found") {
